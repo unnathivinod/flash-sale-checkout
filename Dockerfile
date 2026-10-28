@@ -1,18 +1,17 @@
-FROM python:3.12-slim
+FROM node:22-alpine
 
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+ENV NODE_ENV=production
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install exact dependency versions from package-lock.json
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 
-COPY app ./app
+COPY src ./src
 COPY frontend /static
 
-RUN useradd --create-home app
-USER app
+USER node
 EXPOSE 8080
 
-# 2 processes per container; each runs an async event loop (uvloop).
-CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8080", \
-     "--workers", "2", "--loop", "uvloop", "--http", "httptools", "--no-access-log"]
+# The API. node:cluster starts WEB_PROCESSES event loops in this container.
+CMD ["node", "src/api.js"]

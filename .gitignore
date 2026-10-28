@@ -1,4 +1,2 @@
+node_modules/
 deploy/aws/.env
-__pycache__/
-*.pyc
-.venv/

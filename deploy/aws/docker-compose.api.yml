@@ -17,4 +17,5 @@ services:
       RATE_LIMIT_PER_SEC: "5"     # no NGINX on AWS, so the app rate-limits per IP (shared via Redis)
       STATIC_DIR: /static         # the API also serves the shop page
       DB_POOL_MAX: "20"
+      WEB_PROCESSES: "2"
     restart: unless-stopped

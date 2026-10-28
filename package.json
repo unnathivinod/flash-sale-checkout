@@ -1,0 +1,22 @@
+{
+  "name": "flash-sale-checkout",
+  "version": "1.0.0",
+  "description": "Flash sale checkout: Node.js, Redis Lua, SQS outbox, PostgreSQL",
+  "main": "src/api.js",
+  "scripts": {
+    "api": "node src/api.js",
+    "relay": "node src/relay.js",
+    "worker": "node src/worker.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sqs": "3.687.0",
+    "fastify": "5.1.0",
+    "ioredis": "5.4.1",
+    "pg": "8.13.1"
+  },
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  }
+}

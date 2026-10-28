@@ -2,12 +2,12 @@
 
 A re-architected checkout for a festival flash sale. The original design confirmed **540 orders for 500 phones**. This version sells **exactly 500**, keeps the database off the request path, and keeps working when parts of the system fail mid-sale.
 
-**Stack:** Python (FastAPI, asyncio) · Redis (Lua, Streams) · Amazon SQS (LocalStack locally) · PostgreSQL · NGINX / AWS ALB · Docker · k6
+**Stack:** Node.js 22 (Fastify) · Redis (Lua, Streams) · Amazon SQS (LocalStack locally) · PostgreSQL · NGINX / AWS ALB · Docker · k6
 
 ## How it works
 
 ```
-Browser ──► NGINX / AWS ALB ──► FastAPI x5 ──► Redis Lua script (one atomic step):
+Browser ──► NGINX / AWS ALB ──► Node.js x5 ──► Redis Lua script (one atomic step):
  click lock    rate limit,         (stateless)     sale open? already bought? stock > 0?
  live SSE      bot block                           take token + write order to OUTBOX
                                      │
@@ -38,7 +38,7 @@ Browser ──► NGINX / AWS ALB ──► FastAPI x5 ──► Redis Lua scrip
 
 ## Run it on Windows
 
-Needs **Docker Desktop** running. Python does not need to be installed.
+Needs **Docker Desktop** running. Node.js does not need to be installed.
 
 ```powershell
 docker compose up --build
@@ -90,18 +90,22 @@ Expected: `CHAOS RESULT` shows **Confirmed in DB: 500**, stock 0, queue empty, *
 ## Project structure
 
 ```
-app/api.py           FastAPI: checkout, order status, SSE, stats, naive endpoint, rate limiter
-app/reserve.lua      The atomic reservation script (runs inside Redis)
-app/relay.py         Outbox relay: Redis stream -> Amazon SQS
-app/worker.py        Workers: SQS (or Redis stream) -> PostgreSQL, retries, crash recovery
-app/sqs.py           SQS queue + dead-letter queue setup
-app/config.py        Settings and Redis key names
+src/api.js           Node.js API (Fastify): checkout, order status, SSE, stats, naive endpoint, rate limiter
+src/reserve.lua      The atomic reservation script (runs inside Redis)
+src/relay.js         Outbox relay: Redis stream -> Amazon SQS
+src/worker.js        Workers: SQS (or Redis stream) -> PostgreSQL, retries, crash recovery
+src/sqs.js           SQS queue + dead-letter queue setup
+src/config.js        Settings and Redis key names
 db/init.sql          Tables and safety constraints
-frontend/            Shop page (~14 KB, no framework) and live dashboard
+frontend/            Shop page (~9 KB, no framework) and live dashboard
 nginx/nginx.conf     Load balancer, bot blocking, rate limiting, SSE, static caching
 loadtest/            k6 tests: naive.js, flash-sale.js, chaos.js
 deploy/aws/          AWS Application Load Balancer deployment guide and files
 ```
+
+## Event-loop safety
+
+Each API container runs two Node.js event loops (`node:cluster`, one per CPU core). Every call on the request path (Redis, PostgreSQL, SQS) is non-blocking, nothing CPU-heavy runs there, and the API keeps no shared state in memory, so there are no locks to get wrong and one process can hold thousands of open requests.
 
 ## API
 
@@ -118,17 +122,16 @@ deploy/aws/          AWS Application Load Balancer deployment guide and files
 
 ## Results
 
-Measured on a Windows laptop with Docker Desktop (the test and every server on one machine):
+Measured on a Windows laptop with Docker Desktop (the test and every server on one machine). Fill in from your own run:
 
 | Measure | Original design | New design |
 |---|---|---|
 | Users / requests | 300 / 3,000 | 1,000 / 20,000 |
-| Phones sold (stock 500) | **3,000** (oversold by 2,500) | **exactly 500** |
-| Failed requests | 0% | 0% |
-| p95 latency | — | 686 ms |
-| Requests per second | — | ~1,490 |
-| Double clicks returning the same order | — | 26 / 26 |
-| Chaos test (workers killed, Redis restarted mid-sale) | — | **500 confirmed, 0 left, queue drained, not oversold** |
+| Phones sold (stock 500) | ___ | ___ |
+| Failed requests | ___ | ___ |
+| p95 latency | ___ | ___ |
+| Requests per second | ___ | ___ |
+| Chaos test (workers killed, Redis restarted mid-sale) | — | ___ |
 
 ## Deploy on AWS
 

@@ -14,12 +14,12 @@ Check what your account's free tier covers in **Billing → Free tier**, and **d
         └─────┬─────────┬─────┘
               │         │
        ┌──────▼──┐ ┌────▼────┐
-       │ EC2 api-1│ │ EC2 api-2│   Python API (stateless) + shop page
+       │ EC2 api-1│ │ EC2 api-2│   Node.js API (stateless) + shop page
        └──────┬──┘ └────┬────┘
               └────┬────┘
             ┌──────▼───────┐
             │ EC2 data     │   Redis (stock tokens + queue)
-            │              │   Postgres (orders)  +  Python workers
+            │              │   Postgres (orders)  +  Node.js workers
             └──────────────┘
 ```
 

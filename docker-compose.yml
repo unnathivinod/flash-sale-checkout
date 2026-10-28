@@ -60,13 +60,14 @@ services:
       interval: 3s
       retries: 40
 
-  # 5 identical, stateless API servers (2 processes each)
+  # 5 identical, stateless API servers (2 Node.js event loops each)
   api:
     build: .
     image: flashsale-app
     environment:
       <<: *env
       DB_POOL_MAX: "20"
+      WEB_PROCESSES: "2"
     depends_on: *deps
     deploy:
       replicas: 5
@@ -76,7 +77,7 @@ services:
   relay:
     image: flashsale-app
     pull_policy: never
-    command: ["python", "-m", "app.relay"]
+    command: ["node", "src/relay.js"]
     environment: *env
     depends_on:
       <<: *deps
@@ -87,7 +88,7 @@ services:
   worker:
     image: flashsale-app
     pull_policy: never
-    command: ["python", "-m", "app.worker"]
+    command: ["node", "src/worker.js"]
     environment:
       <<: *env
       WORKER_CONCURRENCY: "4"

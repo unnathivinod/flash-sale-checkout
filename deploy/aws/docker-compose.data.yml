@@ -33,7 +33,7 @@ services:
 
   worker:
     build: ../..
-    command: ["python", "-m", "app.worker"]
+    command: ["node", "src/worker.js"]
     environment:
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       DATABASE_URL: postgresql://flash:${DB_PASSWORD}@postgres:5432/flashsale
