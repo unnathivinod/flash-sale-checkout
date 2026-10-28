@@ -5,122 +5,58 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Festival Phone Sale</title>
 <meta name="description" content="500 phones at 8 PM. One per customer.">
-<link rel="preconnect" href="/api/">
-<!-- Everything is inline: one request, no framework, ~15 KB. -->
+<!-- Everything is inline: one request, no framework, under 10 KB. -->
 <style>
-:root{
-  --ink:#221c4a; --ink-2:#5b5680; --line:#e4e2ef; --bg:#f6f5fb; --card:#fff;
-  --gold:#f2a20c; --gold-ink:#3a2500; --ok:#157f4c; --ok-bg:#e7f5ee; --bad:#b42318; --bad-bg:#fdecea;
-  --wait:#8a5a00; --wait-bg:#fff4dc; --dot-off:#dcd9ea;
-}
-@media (prefers-color-scheme:dark){
-  :root{--ink:#eceaf8;--ink-2:#a8a4c6;--line:#2f2a55;--bg:#14112b;--card:#1c1838;--dot-off:#352f60;
-        --ok-bg:#0f2f22;--bad-bg:#3a1414;--wait-bg:#33260a;--wait:#f4c25a;--ok:#4cc38a;--bad:#ff8a80}
-}
 *{box-sizing:border-box;margin:0}
-body{font:16px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);
-     min-height:100vh;padding:24px 16px 40px}
-.wrap{max-width:1040px;margin:0 auto}
-header{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:24px}
-.brand{font-weight:800;font-size:18px;letter-spacing:-.01em}
-.who{font-size:14px;color:var(--ink-2)}
-.grid{display:grid;grid-template-columns:1.25fr 1fr;gap:24px;align-items:start}
-@media(max-width:860px){.grid{grid-template-columns:1fr}.buy-col{order:-1}}
-section{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px}
-h1{font-size:clamp(28px,4vw,40px);line-height:1.1;letter-spacing:-.02em;font-weight:800}
-.sub{color:var(--ink-2);margin-top:6px}
-.price{display:flex;align-items:baseline;gap:12px;margin:18px 0 22px}
-.price b{font-size:30px;font-weight:800}
-.price s{color:var(--ink-2)}
-.price span{font-size:14px;font-weight:700;color:var(--ok)}
-/* --- the 500-dot stock grid: one dot per phone --- */
-.stock-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;gap:12px}
-.stock-head strong{font-size:22px;font-variant-numeric:tabular-nums}
-.stock-head small{color:var(--ink-2);font-size:14px}
-#dots{display:grid;grid-template-columns:repeat(25,1fr);gap:4px}
-#dots i{aspect-ratio:1;border-radius:50%;background:var(--gold);transition:background .35s,transform .35s}
-#dots i.gone{background:var(--dot-off);transform:scale(.7)}
-.legend{display:flex;gap:16px;margin-top:12px;font-size:13px;color:var(--ink-2)}
-.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px;background:var(--gold)}
-.legend span.g::before{background:var(--dot-off)}
-/* --- buy column --- */
-.clock{font-size:clamp(40px,7vw,56px);font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1}
-.clock-label{color:var(--ink-2);margin:6px 0 20px;font-size:15px}
-button{font:inherit}
-#buy{width:100%;padding:17px;border:0;border-radius:14px;background:var(--gold);color:var(--gold-ink);font-size:18px;font-weight:800;cursor:pointer;transition:transform .06s, filter .2s}
-#buy:hover:not(:disabled){filter:brightness(1.05)}
-#buy:active:not(:disabled){transform:scale(.985)}
-#buy:disabled{cursor:not-allowed;opacity:.55}
-#buy:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
-.msg{margin-top:14px;padding:12px 14px;border-radius:12px;font-size:15px;display:none}
+body{font:15px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;background:#f7f7f8;color:#1f2937;
+     min-height:100vh;display:grid;place-items:center;padding:24px 16px}
+.card{width:100%;max-width:440px;background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:32px}
+.tag{font-size:13px;font-weight:600;color:#6b7280;display:flex;align-items:center;gap:6px}
+.tag::before{content:"";width:8px;height:8px;border-radius:50%;background:#d1d5db}
+.tag.live{color:#047857}.tag.live::before{background:#10b981}
+.tag.out{color:#b91c1c}.tag.out::before{background:#ef4444}
+h1{font-size:24px;font-weight:600;margin:6px 0 2px}
+.muted{color:#6b7280;font-size:14px}
+hr{border:0;border-top:1px solid #f0f0f2;margin:22px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.k{font-size:13px;color:#6b7280}.v{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.bar{height:8px;background:#f0f0f2;border-radius:4px;margin-top:16px;overflow:hidden}
+.bar i{display:block;height:100%;width:100%;background:#111827;border-radius:4px;transition:width .4s}
+#buy{width:100%;padding:14px;border:0;border-radius:10px;background:#111827;color:#fff;font:inherit;font-size:16px;font-weight:600;cursor:pointer}
+#buy:hover:not(:disabled){background:#1f2937}
+#buy:disabled{background:#d1d5db;color:#6b7280;cursor:not-allowed}
+#buy:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
+.msg{margin-top:14px;border-radius:8px;padding:12px;font-size:14px;display:none}
 .msg.show{display:block}
-.msg.wait{background:var(--wait-bg);color:var(--wait)}
-.msg.ok{background:var(--ok-bg);color:var(--ok)}
-.msg.bad{background:var(--bad-bg);color:var(--bad)}
-/* order progress: a real sequence, so it is numbered */
-ol.steps{list-style:none;padding:0;margin:20px 0 0;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;counter-reset:s}
-ol.steps li{counter-increment:s;font-size:13px;color:var(--ink-2);padding-top:10px;border-top:4px solid var(--line);transition:border-color .3s,color .3s}
-ol.steps li::before{content:counter(s) ". "}
-ol.steps li.on{border-color:var(--gold);color:var(--ink);font-weight:700}
-ol.steps li.done{border-color:var(--ok);color:var(--ok);font-weight:700}
-.feed{margin-top:24px}
-.feed h2{font-size:15px;font-weight:700;margin-bottom:8px}
-.feed ul{list-style:none;padding:0}
-.feed li{display:flex;justify-content:space-between;gap:12px;font-size:14px;padding:7px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
-.feed li span:last-child{color:var(--ink-2);white-space:nowrap}
-.feed .empty{color:var(--ink-2);font-size:14px}
-.spin{display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:r .7s linear infinite;vertical-align:-1px;margin-right:8px}
-@keyframes r{to{transform:rotate(360deg)}}
-.m-only{display:none;font-weight:700;margin-bottom:14px}
-@media(max-width:860px){.m-only{display:block}}
-.fine{margin-top:18px;font-size:13px;color:var(--ink-2)}
-.live{display:inline-flex;align-items:center;gap:6px}
-.live::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--dot-off)}
-.live.on::before{background:var(--ok)}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.msg.wait{background:#f3f4f6;color:#374151}
+.msg.ok{background:#ecfdf5;color:#047857}
+.msg.bad{background:#fef2f2;color:#b91c1c}
+.steps{display:flex;justify-content:space-between;margin-top:14px;font-size:13px;color:#9ca3af;list-style:none;padding:0}
+.steps li.done{color:#047857;font-weight:600}
+.steps li.on{color:#111827;font-weight:600}
+.foot{margin-top:18px;font-size:12px;color:#9ca3af;text-align:center}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="brand">Festival Phone Sale</div>
-    <div class="who">Signed in as <b id="who"></b> <span id="live" class="live" title="Live updates">live</span></div>
-  </header>
-
+<main class="card">
+  <span class="tag" id="tag">Loading</span>
+  <h1>Flash Phone X</h1>
+  <p class="muted">8 GB RAM, 256 GB storage, 5G. One per customer.</p>
+  <hr>
   <div class="grid">
-    <section aria-labelledby="t">
-      <h1 id="t">Flash Phone X</h1>
-      <p class="sub">8 GB RAM, 256 GB storage, 5G. Limited to one per customer.</p>
-      <div class="price"><b>₹19,999</b><s>₹34,999</s><span>Save ₹15,000</span></div>
-
-      <div class="stock-head">
-        <strong id="stockText">500 of 500 left</strong>
-        <small>Each dot is one phone</small>
-      </div>
-      <div id="dots" role="img" aria-label="Stock remaining"></div>
-      <div class="legend"><span>Available</span><span class="g">Reserved</span></div>
-    </section>
-
-    <section class="buy-col" aria-live="polite">
-      <p class="m-only">Flash Phone X for ₹19,999</p>
-      <div class="clock" id="clock">--:--</div>
-      <p class="clock-label" id="clockLabel">until the sale opens</p>
-
-      <button id="buy" disabled>Waiting for the sale</button>
-      <div class="msg" id="msg" role="status"></div>
-
-      <ol class="steps" id="steps" aria-label="Order progress">
-        <li>Phone reserved</li><li>Order queued</li><li>Order confirmed</li>
-      </ol>
-
-      <div class="feed">
-        <h2>Just reserved</h2>
-        <ul id="feed"><li class="empty">Reservations will appear here once the sale opens.</li></ul>
-      </div>
-      <p class="fine">Stock is held the moment you reserve. Your order is saved in the background and confirmed here within seconds.</p>
-    </section>
+    <div><div class="k">Price</div><div class="v">₹19,999</div></div>
+    <div><div class="k" id="rightLabel">Left</div><div class="v" id="left">– / 500</div></div>
   </div>
-</div>
+  <div class="bar" aria-hidden="true"><i id="bar"></i></div>
+  <hr>
+  <button id="buy" disabled>Waiting for the sale</button>
+  <div class="msg" id="msg" role="status" aria-live="polite"></div>
+  <ol class="steps" id="steps" aria-label="Order progress">
+    <li>Reserved</li><li>Queued</li><li>Confirmed</li>
+  </ol>
+  <p class="foot">Signed in as <span id="who"></span></p>
+</main>
 
 <script>
 (() => {
@@ -132,87 +68,64 @@ ol.steps li.done{border-color:var(--ok);color:var(--ok);font-weight:700}
   if (!user) { user = 'guest-' + Math.random().toString(36).slice(2, 10); sessionStorage.setItem('uid', user); }
   $('who').textContent = user;
 
-  // Build the 500 dots once.
-  const DOTS = 500, dotsEl = $('dots'), dots = [];
-  for (let i = 0; i < DOTS; i++) { const d = document.createElement('i'); dotsEl.appendChild(d); dots.push(d); }
-
-  let sale = null, offset = 0;        // last sale snapshot; server clock minus ours
+  let sale = null, offset = 0;        // last sale data; server clock minus ours
   let phase = 'idle';                 // idle -> reserving -> queued -> confirmed / soldout / failed
   const jitter = ms => ms * (0.8 + Math.random() * 0.4);
   const sleep = ms => new Promise(r => setTimeout(r, ms));
-  const show = (cls, html) => { msg.className = 'msg show ' + cls; msg.innerHTML = html; };
+  const show = (cls, text) => { msg.className = 'msg show ' + cls; msg.textContent = text; };
 
   // ---------- live sale data: Server-Sent Events, polling as fallback ----------
   function apply(s) {
     sale = s; offset = s.serverTime - Date.now();
-    const left = Math.max(0, s.stockLeft), total = s.totalStock || DOTS;
-    $('stockText').textContent = left > 0 ? `${left} of ${total} left` : 'Sold out';
-    const gone = Math.round((total - left) / total * DOTS);
-    for (let i = 0; i < DOTS; i++) dots[i].classList.toggle('gone', i >= DOTS - gone);
-    renderFeed(s.feed || []);
-    if (left <= 0 && phase === 'idle') {
-      btn.disabled = true; btn.textContent = 'Sold out';
-      show('bad', 'All 500 phones have been reserved.');
-    }
-  }
-  function renderFeed(items) {
-    if (!items.length) return;
-    const now = Date.now() + offset;
-    $('feed').innerHTML = items.slice(0, 5).map(f => {
-      const s = Math.max(0, Math.round((now - f.at) / 1000));
-      return `<li><span>Order ${f.order}</span><span>${s < 60 ? s + 's' : Math.round(s / 60) + 'm'} ago</span></li>`;
-    }).join('');
+    const left = Math.max(0, s.stockLeft), total = s.totalStock || 500;
+    $('left').textContent = `${left} / ${total}`;
+    $('bar').style.width = (left / total * 100) + '%';
+    if (left <= 0 && phase === 'idle') { btn.disabled = true; btn.textContent = 'Sold out'; }
   }
 
-  let es = null, sseFails = 0, pollTimer = null;
+  let sseFails = 0;
   function connect() {
     if (!window.EventSource) return poll();
-    es = new EventSource('/api/events');
-    es.onmessage = e => { sseFails = 0; $('live').classList.add('on'); try { apply(JSON.parse(e.data)); } catch (_) {} };
-    es.onerror = () => {
-      $('live').classList.remove('on');
-      if (++sseFails >= 3) { es.close(); poll(); }      // SSE blocked? fall back to polling
-    };
+    const es = new EventSource('/api/events');
+    es.onmessage = e => { sseFails = 0; try { apply(JSON.parse(e.data)); } catch (_) {} };
+    es.onerror = () => { if (++sseFails >= 3) { es.close(); poll(); } };   // SSE blocked? poll instead
   }
   async function poll() {
     try { const r = await fetch('/api/sale', { cache: 'no-store' }); if (r.ok) apply(await r.json()); } catch (_) {}
     if (sale && sale.status === 'SOLD_OUT') return;
     const near = sale && Math.abs(sale.startsAt - (Date.now() + offset)) < 10000;
-    pollTimer = setTimeout(poll, jitter(near ? 1000 : 3000));   // jitter: users do not poll in lock-step
+    setTimeout(poll, jitter(near ? 1000 : 3000));          // jitter: users do not poll in lock-step
   }
 
   // ---------- countdown, synced to the server clock ----------
   function tick() {
     if (sale) {
-      const ms = sale.startsAt - (Date.now() + offset);
+      const ms = sale.startsAt - (Date.now() + offset), tag = $('tag');
       if (ms > 0) {
-        const s = Math.ceil(ms / 1000), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), ss = s % 60;
-        $('clock').textContent = (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(ss).padStart(2, '0');
-        $('clockLabel').textContent = 'until the sale opens';
+        const s = Math.ceil(ms / 1000);
+        tag.className = 'tag'; tag.textContent = `Sale opens in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
         if (phase === 'idle') { btn.disabled = true; btn.textContent = 'Waiting for the sale'; }
+      } else if (sale.stockLeft > 0) {
+        tag.className = 'tag live'; tag.textContent = 'Sale is live';
+        if (phase === 'idle') { btn.disabled = false; btn.textContent = 'Reserve my phone'; }
       } else {
-        $('clock').textContent = sale.stockLeft > 0 ? 'Live now' : 'Sold out';
-        $('clockLabel').textContent = sale.stockLeft > 0 ? 'Tap once. Your spot is held instantly.' : 'Thanks for joining the sale.';
-        if (phase === 'idle' && sale.stockLeft > 0) { btn.disabled = false; btn.textContent = 'Reserve my phone'; }
+        tag.className = 'tag out'; tag.textContent = 'Sold out';
       }
     }
     setTimeout(tick, 250);
   }
 
-  function steps(n, done) {
-    [...$('steps').children].forEach((li, i) => {
-      li.className = i < n ? 'done' : (i === n && !done ? 'on' : '');
-    });
+  function steps(n) {
+    [...$('steps').children].forEach((li, i) => { li.className = i < n ? 'done' : (i === n ? 'on' : ''); });
   }
 
   // ---------- the button: locked on the FIRST click ----------
   btn.addEventListener('click', async () => {
     if (phase !== 'idle') return;          // every later click is ignored
     phase = 'reserving';
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spin"></span>Reserving';
+    btn.disabled = true; btn.textContent = 'Reserving…';
     steps(0);
-    show('wait', '<span class="spin"></span>Holding your spot');   // optimistic: answer before the server does
+    show('wait', 'Holding your spot…');    // optimistic: answer before the server does
     await checkout(0);
   });
 
@@ -223,26 +136,25 @@ ol.steps li.done{border-color:var(--ok);color:var(--ok);font-weight:700}
       r = await fetch('/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user }), signal: ctrl.signal });
       clearTimeout(t);
-    } catch (_) { return retry(attempt, 'The connection dropped'); }   // safe: same user gets the same order
+    } catch (_) { return retry(attempt, 'Connection dropped'); }   // safe: same user gets the same order
 
     if (r.status === 202) {
       const d = await r.json();
-      phase = 'queued'; steps(1);
-      btn.textContent = 'Reserved';
-      show('wait', '<span class="spin"></span>Phone reserved. Confirming your order');
+      phase = 'queued'; steps(1); btn.textContent = 'Reserved';
+      show('wait', 'Phone reserved. Confirming your order…');
       return track(d.trackUrl, d.orderId);
     }
-    if (r.status === 409) return end('soldout', 'bad', 'All 500 phones were reserved before your request arrived.', 'Sold out');
+    if (r.status === 409) return end('bad', 'Sold out. All 500 phones were reserved before your request arrived.', 'Sold out');
     if (r.status === 425) { phase = 'idle'; return show('wait', 'The sale has not opened yet.'); }
-    if (r.status === 429 || r.status >= 500) return retry(attempt, 'Traffic is very high');
-    return end('failed', 'bad', 'Something went wrong. Refresh the page to try again.', 'Try again');
+    if (r.status === 429 || r.status >= 500) return retry(attempt, 'High traffic');
+    return end('bad', 'Something went wrong. Refresh the page to try again.', 'Try again');
   }
 
   async function retry(attempt, why) {
     if (attempt >= 4) { phase = 'idle'; btn.disabled = false; btn.textContent = 'Reserve my phone'; steps(-1);
       return show('bad', why + '. Tap the button to try again.'); }
     const wait = jitter(Math.min(8000, 1000 * 2 ** attempt));       // 1s, 2s, 4s, 8s
-    show('wait', `<span class="spin"></span>${why}. Retrying in ${Math.ceil(wait / 1000)}s`);
+    show('wait', `${why}. Retrying in ${Math.ceil(wait / 1000)}s…`);
     await sleep(wait);
     return checkout(attempt + 1);
   }
@@ -255,21 +167,19 @@ ol.steps li.done{border-color:var(--ok);color:var(--ok);font-weight:700}
         const r = await fetch(url, { cache: 'no-store' });
         if (r.ok) {
           const { status } = await r.json();
-          if (status === 'CONFIRMED') { steps(3, true);
-            return end('confirmed', 'ok', `Order confirmed. Your order number is <b>${id}</b>.`, 'Purchased'); }
-          if (status !== 'QUEUED') return end('failed', 'bad', 'This order could not be completed. You have not been charged.', 'Not completed');
-          steps(1);
+          if (status === 'CONFIRMED') { steps(3); return end('ok', `Order confirmed · ${id}`, 'Purchased'); }
+          if (status !== 'QUEUED') return end('bad', 'This order could not be completed. You have not been charged.', 'Not completed');
         }
       } catch (_) {}
       delay = Math.min(delay * 1.5, 4000);
     }
-    end('queued', 'wait', 'Your phone is reserved. Confirmation is taking longer than usual; we will email you.', 'Reserved');
+    end('wait', 'Your phone is reserved. Confirmation is taking longer than usual.', 'Reserved');
   }
 
-  function end(p, cls, text, label) { phase = p; btn.disabled = true; btn.textContent = label; show(cls, text); }
+  function end(cls, text, label) { phase = 'done'; btn.disabled = true; btn.textContent = label; show(cls, text); }
 
   connect();
-  if (window.EventSource) fetch('/api/sale', { cache: 'no-store' }).then(r => r.json()).then(apply).catch(() => {});
+  fetch('/api/sale', { cache: 'no-store' }).then(r => r.json()).then(apply).catch(() => {});
   tick();
 })();
 </script>
