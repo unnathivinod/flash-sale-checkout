@@ -40,6 +40,13 @@ async function main() {
   await bootstrap(rdb, db);
 
   const app = Fastify({ logger: false, bodyLimit: 1024 });
+  // Accept JSON, an empty body, or any content type (tools like PowerShell send
+  // form encoding by default). Bodies that are not valid JSON are treated as empty;
+  // checkout then rejects them with 400 "invalid userId".
+  app.removeAllContentTypeParsers();
+  app.addContentTypeParser('*', { parseAs: 'string' }, (req, body, done) => {
+    try { done(null, body ? JSON.parse(body) : {}); } catch { done(null, {}); }
+  });
   const sseClients = new Set();
   let snapshot = '{}';
 
