@@ -140,6 +140,7 @@ hr{border:0;border-top:1px solid #f0f0f2;margin:22px 0}
 
     if (r.status === 202) {
       const d = await r.json();
+      if (sale && typeof d.stockLeft === 'number') apply({ ...sale, stockLeft: d.stockLeft, serverTime: Date.now() + offset });
       phase = 'queued'; steps(1); btn.textContent = 'Reserved';
       show('wait', 'Phone reserved. Confirming your order…');
       return track(d.trackUrl, d.orderId);
