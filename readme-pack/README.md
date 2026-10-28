@@ -122,16 +122,34 @@ Each API container runs two Node.js event loops (`node:cluster`, one per CPU cor
 
 ## Results
 
-Measured on a Windows laptop with Docker Desktop (the test and every server on one machine). Fill in from your own run:
+Measured on a Windows laptop with Docker Desktop (the test tool and every server on one machine):
 
 | Measure | Original design | New design |
 |---|---|---|
 | Users / requests | 300 / 3,000 | 1,000 / 20,000 |
-| Phones sold (stock 500) | ___ | ___ |
-| Failed requests | ___ | ___ |
-| p95 latency | ___ | ___ |
-| Requests per second | ___ | ___ |
-| Chaos test (workers killed, Redis restarted mid-sale) | — | ___ |
+| Phones sold (stock 500) | **3,000** (oversold by 2,500) | **exactly 500** |
+| Failed requests | 0% | **0.00%** |
+| p95 latency | — | **736 ms** |
+| Requests per second | — | **1,644** |
+| Double clicks returning the same order | — | **25 / 25** |
+| Chaos test (workers killed, Redis restarted mid-sale) | — | **500 confirmed, 0% failed, nothing lost** |
+| Sale page | — | **~9 KB**, Lighthouse performance **100**, largest paint **0.16 s** |
+| Spam / bots | — | **429** after a burst, **403** for scripted clients |
+
+10,000 requests per second (the brief's peak) was not demonstrated on one laptop; the API is stateless and scales by adding replicas.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Shop page](docs/screenshots/shop.png) | ![Lighthouse](docs/screenshots/lighthouse.png) |
+| Shop page after a confirmed order | Lighthouse report |
+| ![Original vs new](docs/screenshots/compare.png) | ![k6 result](docs/screenshots/k6-result.png) |
+| Monitor: new design 500, original design 3,000 | k6 load test: exactly 500 |
+| ![Chaos: orders waiting](docs/screenshots/chaos-waiting.png) | ![Chaos result](docs/screenshots/chaos-result.png) |
+| Chaos test: 500 orders waiting while workers are down | Chaos test result |
+| ![Rate limit and bot block](docs/screenshots/rate-limit.png) | |
+| Rapid requests get 429, a bot gets 403 | |
 
 ## Deploy on AWS
 
