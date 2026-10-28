@@ -1,0 +1,114 @@
+# One command runs everything:   docker compose up --build
+#   http://localhost:8080             shop page
+#   http://localhost:8080/stats.html  live dashboard
+name: flashsale
+
+x-env: &env
+  REDIS_URL: redis://redis:6379/0
+  DATABASE_URL: postgresql://flash:flash@postgres:5432/flashsale
+  QUEUE_BACKEND: sqs                 # change to "redis" to run without SQS/LocalStack
+  SQS_ENDPOINT: http://localstack:4566
+  SQS_QUEUE_NAME: flashsale-orders
+  AWS_REGION: ap-south-1
+  AWS_ACCESS_KEY_ID: test            # LocalStack accepts any credentials
+  AWS_SECRET_ACCESS_KEY: test
+  TOTAL_STOCK: "500"
+  SALE_DELAY_SEC: "30"
+  ADMIN_TOKEN: demo-admin-token
+  LOADTEST_KEY: local-loadtest-only
+  RATE_LIMIT_PER_SEC: "0"            # NGINX does rate limiting locally
+
+x-deps: &deps
+  postgres: { condition: service_healthy }
+  redis: { condition: service_healthy }
+  localstack: { condition: service_healthy }
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: flash
+      POSTGRES_PASSWORD: flash
+      POSTGRES_DB: flashsale
+    command: ["postgres", "-c", "max_connections=300"]
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flash -d flashsale"]
+      interval: 2s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    # appendfsync always: every reservation is written to disk before Redis
+    # replies, so a Redis restart mid-sale loses nothing.
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "always"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 30
+
+  # LocalStack imitates Amazon SQS on your laptop (free, no AWS account needed)
+  localstack:
+    image: localstack/localstack:3.8.1
+    environment:
+      SERVICES: sqs
+      AWS_DEFAULT_REGION: ap-south-1
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4566/_localstack/health"]
+      interval: 3s
+      retries: 40
+
+  # 3 identical, stateless API servers (2 processes each)
+  api:
+    build: .
+    image: flashsale-app
+    environment:
+      <<: *env
+      DB_POOL_MAX: "20"
+    depends_on: *deps
+    deploy:
+      replicas: 3
+    restart: unless-stopped
+
+  # Moves reservations from the Redis outbox to SQS
+  relay:
+    image: flashsale-app
+    pull_policy: never
+    command: ["python", "-m", "app.relay"]
+    environment: *env
+    depends_on:
+      <<: *deps
+      api: { condition: service_started }
+    restart: unless-stopped
+
+  # Take orders off SQS and save them in Postgres
+  worker:
+    image: flashsale-app
+    pull_policy: never
+    command: ["python", "-m", "app.worker"]
+    environment:
+      <<: *env
+      WORKER_CONCURRENCY: "4"
+    depends_on:
+      <<: *deps
+      api: { condition: service_started }
+    deploy:
+      replicas: 2
+    restart: unless-stopped
+
+  # Load balancer + rate limiter + static files (AWS ALB + CloudFront locally)
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
+networks:
+  default:
+    name: flashsale-net

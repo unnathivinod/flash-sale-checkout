@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sale Monitor</title>
+<style>
+:root{--ink:#221c4a;--ink-2:#5b5680;--line:#e4e2ef;--bg:#f6f5fb;--card:#fff;--gold:#f2a20c;--ok:#157f4c;--bad:#b42318;--soft:#9b97b8}
+@media (prefers-color-scheme:dark){:root{--ink:#eceaf8;--ink-2:#a8a4c6;--line:#2f2a55;--bg:#14112b;--card:#1c1838;--ok:#4cc38a;--bad:#ff8a80;--soft:#6e6996}}
+*{box-sizing:border-box;margin:0}
+body{font:15px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);padding:24px 16px 40px}
+.wrap{max-width:1180px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+h1{font-size:26px;font-weight:800;letter-spacing:-.01em}
+header p{color:var(--ink-2)}
+.row{display:grid;gap:16px;margin-bottom:16px}
+.r2{grid-template-columns:1fr 1fr}.r3{grid-template-columns:1.4fr 1fr}
+@media(max-width:820px){.r2,.r3{grid-template-columns:1fr}}
+section{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
+h2{font-size:15px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.tag{font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;white-space:nowrap}
+.tag.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+.tag.bad{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
+.big{font-size:52px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.big.ok{color:var(--ok)}.big.bad{color:var(--bad)}
+.cap{color:var(--ink-2);margin:4px 0 10px}
+dl{display:grid;grid-template-columns:1fr auto;font-variant-numeric:tabular-nums}
+dt,dd{padding:6px 0;border-top:1px solid var(--line)}
+dt{color:var(--ink-2)}dd{font-weight:700;text-align:right}
+canvas{width:100%;height:190px;display:block}
+.key{display:flex;gap:14px;font-size:13px;color:var(--ink-2);margin-top:8px;flex-wrap:wrap}
+.key span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px;background:var(--c)}
+form{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input,button{font:inherit;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+button{background:var(--gold);border:0;font-weight:800;color:#3a2500;cursor:pointer}
+label{font-size:14px;color:var(--ink-2)}
+#note{color:var(--ink-2);font-size:13px;margin-top:8px}
+code{font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>Sale monitor</h1><p>Refreshes every second. Stock: <b id="total">500</b> phones.</p></div>
+    <form id="reset">
+      <label for="token">Admin token</label><input id="token" value="demo-admin-token" size="16">
+      <label for="delay">Opens in (s)</label><input id="delay" type="number" min="0" value="10" style="width:80px">
+      <button>Reset sale</button>
+    </form>
+  </header>
+
+  <div class="row r2">
+    <section>
+      <h2>New design: Redis token, outbox, SQS, workers <span id="fixedTag" class="tag ok">No overselling</span></h2>
+      <div class="big ok" id="confirmed">0</div>
+      <p class="cap">orders confirmed in PostgreSQL</p>
+      <dl>
+        <dt>Reserved in Redis</dt><dd id="reserved">0</dd>
+        <dt>Phones left in Redis</dt><dd id="redisLeft">0</dd>
+        <dt>Phones left in PostgreSQL</dt><dd id="dbLeft">0</dd>
+      </dl>
+    </section>
+    <section>
+      <h2>Original design: read stock, then update <span id="naiveTag" class="tag ok">OK</span></h2>
+      <div class="big" id="naiveOrders">0</div>
+      <p class="cap">orders accepted</p>
+      <dl>
+        <dt>Oversold by</dt><dd id="oversoldBy">0</dd>
+        <dt>Phones left in PostgreSQL</dt><dd id="naiveLeft">0</dd>
+      </dl>
+    </section>
+  </div>
+
+  <div class="row r3">
+    <section>
+      <h2>Checkout results per second (last 60 s)</h2>
+      <canvas id="rps" aria-label="Requests per second chart"></canvas>
+      <div class="key"><span style="--c:var(--ok)">Reserved</span><span style="--c:var(--soft)">Sold out</span><span style="--c:var(--gold)">Repeat click (same order)</span></div>
+    </section>
+    <section>
+      <h2>Queue</h2>
+      <dl>
+        <dt>Backend</dt><dd id="qb">-</dd>
+        <dt>Waiting in Redis outbox</dt><dd id="qo">0</dd>
+        <dt>Waiting in SQS</dt><dd id="qv">0</dd>
+        <dt>Being processed</dt><dd id="qf">0</dd>
+      </dl>
+      <canvas id="qchart" style="height:110px;margin-top:10px" aria-label="Queue depth chart"></canvas>
+      <p id="note">Run the chaos test while watching this panel: orders wait here while workers are down, then drain.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const qHist = [];
+
+function canvasCtx(el) {
+  const r = el.getBoundingClientRect(), d = devicePixelRatio || 1;
+  el.width = r.width * d; el.height = r.height * d;
+  const c = el.getContext('2d'); c.scale(d, d); return [c, r.width, r.height];
+}
+
+function drawBars(series) {
+  const [c, w, h] = canvasCtx($('rps'));
+  const max = Math.max(10, ...series.map(s => s.accepted + s.soldOut + s.duplicate));
+  const pad = 26, bw = (w - pad) / series.length;
+  c.fillStyle = css('--ink-2'); c.font = '11px system-ui'; c.textAlign = 'right';
+  c.fillText(max, pad - 4, 10); c.fillText(0, pad - 4, h - 2);
+  c.strokeStyle = css('--line'); c.beginPath(); c.moveTo(pad, h - 0.5); c.lineTo(w, h - 0.5); c.stroke();
+  series.forEach((s, i) => {
+    let y = h; const x = pad + i * bw + 1;
+    for (const [v, col] of [[s.accepted, '--ok'], [s.soldOut, '--soft'], [s.duplicate, '--gold']]) {
+      const bh = v / max * (h - 14); c.fillStyle = css(col); c.fillRect(x, y - bh, Math.max(1, bw - 2), bh); y -= bh;
+    }
+  });
+}
+
+function drawLine(values) {
+  const [c, w, h] = canvasCtx($('qchart'));
+  const max = Math.max(5, ...values);
+  c.strokeStyle = css('--gold'); c.lineWidth = 2; c.beginPath();
+  values.forEach((v, i) => { const x = i / 59 * w, y = h - 4 - v / max * (h - 10); i ? c.lineTo(x, y) : c.moveTo(x, y); });
+  c.stroke();
+  c.fillStyle = css('--ink-2'); c.font = '11px system-ui'; c.fillText('max ' + max, 4, 11);
+}
+
+async function load() {
+  try {
+    const [s, m] = await Promise.all([
+      fetch('/api/stats', { cache: 'no-store' }).then(r => r.json()),
+      fetch('/api/metrics', { cache: 'no-store' }).then(r => r.json())]);
+    $('total').textContent = s.totalStock;
+    $('confirmed').textContent = s.confirmedOrders;
+    $('reserved').textContent = s.reserved;
+    $('redisLeft').textContent = s.redisStockLeft;
+    $('dbLeft').textContent = s.dbStockLeft;
+    $('fixedTag').textContent = s.oversold ? 'Oversold' : 'No overselling';
+    $('fixedTag').className = 'tag ' + (s.oversold ? 'bad' : 'ok');
+    const n = s.naive;
+    $('naiveOrders').textContent = n.orders;
+    $('naiveOrders').className = 'big ' + (n.oversold ? 'bad' : '');
+    $('oversoldBy').textContent = n.oversoldBy;
+    $('naiveLeft').textContent = n.dbStockLeft;
+    $('naiveTag').textContent = n.oversold ? 'Oversold' : 'OK';
+    $('naiveTag').className = 'tag ' + (n.oversold ? 'bad' : 'ok');
+
+    const q = s.queue || {}, sq = q.sqs || {};
+    $('qb').textContent = q.backend === 'sqs' ? 'Amazon SQS (LocalStack)' : 'Redis Streams';
+    $('qo').textContent = q.outboxPending ?? 0;
+    $('qv').textContent = sq.visible ?? '-';
+    $('qf').textContent = sq.inFlight ?? '-';
+    qHist.push(s.queuePending || 0); if (qHist.length > 60) qHist.shift();
+    drawLine(Array(60 - qHist.length).fill(0).concat(qHist));
+    drawBars(m.series);
+  } catch (_) {}
+}
+
+$('reset').onsubmit = async e => {
+  e.preventDefault();
+  const r = await fetch('/api/admin/reset?delay=' + ($('delay').value || 0), { method: 'POST', headers: { 'X-Admin-Token': $('token').value } });
+  $('note').textContent = r.ok ? 'Sale reset. Stock is back to 500.' : 'Reset failed (' + r.status + '). Check the admin token.';
+  load();
+};
+load(); setInterval(load, 1000);
+</script>
+</body>
+</html>
