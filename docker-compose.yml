@@ -54,12 +54,13 @@ services:
     environment:
       SERVICES: sqs
       AWS_DEFAULT_REGION: ap-south-1
+      LS_LOG: warn                   # only log warnings, not every request
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:4566/_localstack/health"]
       interval: 3s
       retries: 40
 
-  # 3 identical, stateless API servers (2 processes each)
+  # 5 identical, stateless API servers (2 processes each)
   api:
     build: .
     image: flashsale-app
@@ -68,7 +69,7 @@ services:
       DB_POOL_MAX: "20"
     depends_on: *deps
     deploy:
-      replicas: 3
+      replicas: 5
     restart: unless-stopped
 
   # Moves reservations from the Redis outbox to SQS

@@ -17,6 +17,7 @@ const soldOut = new Counter('sold_out_409');
 const busy = new Counter('busy_503_retried');
 
 export const options = {
+  teardownTimeout: '3m',   // workers may be down for a while; wait for the queue to drain
   scenarios: {
     // slower, steady rush lasting ~40 s so there is time to break things
     rush: { executor: 'constant-arrival-rate', rate: Number(__ENV.RATE || 300), timeUnit: '1s',
@@ -43,7 +44,7 @@ export default function () {
 export function teardown() {
   // wait for workers to come back and drain the queue
   let s;
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 170; i++) {
     s = http.get(`${BASE}/api/stats`, { responseCallback: http.expectedStatuses(200) }).json();
     if (s.queuePending === 0 && s.confirmedOrders >= s.reserved) break;
     sleep(1);

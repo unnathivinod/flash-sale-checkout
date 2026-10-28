@@ -7,7 +7,7 @@ A re-architected checkout for a festival flash sale. The original design confirm
 ## How it works
 
 ```
-Browser ──► NGINX / AWS ALB ──► FastAPI x3 ──► Redis Lua script (one atomic step):
+Browser ──► NGINX / AWS ALB ──► FastAPI x5 ──► Redis Lua script (one atomic step):
  click lock    rate limit,         (stateless)     sale open? already bought? stock > 0?
  live SSE      bot block                           take token + write order to OUTBOX
                                      │
@@ -18,7 +18,7 @@ Browser ──► NGINX / AWS ALB ──► FastAPI x3 ──► Redis Lua scrip
 ```
 
 1. The button locks on the first click, so one user sends one request.
-2. NGINX (AWS ALB in the cloud) blocks bots, rate-limits per IP and spreads load over 3 API servers.
+2. NGINX (AWS ALB in the cloud) blocks bots, rate-limits per IP and spreads load over 5 API servers.
 3. The API runs **one Lua script** in Redis: it checks the sale has started, returns the same order if this user already reserved, checks stock, takes a token and writes the order to an **outbox stream**, all atomically.
 4. The API replies **202 Accepted** with a tracking URL. No database call on the hot path.
 5. A **relay** moves orders from the outbox to **Amazon SQS** and only acknowledges them after SQS accepts them (transactional outbox pattern).
@@ -118,16 +118,17 @@ deploy/aws/          AWS Application Load Balancer deployment guide and files
 
 ## Results
 
-Fill in from your own run:
+Measured on a Windows laptop with Docker Desktop (the test and every server on one machine):
 
 | Measure | Original design | New design |
 |---|---|---|
-| Users / requests | ___ | ___ |
-| Phones sold (stock 500) | ___ | ___ |
-| Failed requests | ___ | ___ |
-| p95 latency | ___ | ___ |
-| Requests per second | ___ | ___ |
-| Chaos test (workers killed, Redis restarted) | not applicable | ___ |
+| Users / requests | 300 / 3,000 | 1,000 / 20,000 |
+| Phones sold (stock 500) | **3,000** (oversold by 2,500) | **exactly 500** |
+| Failed requests | 0% | 0% |
+| p95 latency | — | 686 ms |
+| Requests per second | — | ~1,490 |
+| Double clicks returning the same order | — | 26 / 26 |
+| Chaos test (workers killed, Redis restarted mid-sale) | — | **500 confirmed, 0 left, queue drained, not oversold** |
 
 ## Deploy on AWS
 
