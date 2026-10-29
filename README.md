@@ -5,7 +5,7 @@ A checkout service for a festival flash sale that sells exactly 500 phones to a 
 **Candidate:** Unnathi Vinod · **Role:** Full-Stack Software Engineer (campus placement case study)
 **Full write-up:** [`docs/Flash_Sale_Case_Study_Unnathi_Vinod.docx`](docs/Flash_Sale_Case_Study_Unnathi_Vinod.docx)
 
-## At a glance
+## Summary
 
 The brief: 500 phones go on sale at 8:00 PM and more than 100,000 checkout requests arrive in the first ten seconds. Earlier trial runs timed out, locked up the inventory row and confirmed 540 orders for 500 phones.
 
